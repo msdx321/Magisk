@@ -48,9 +48,9 @@
 #include "magisk.h"
 
 #ifdef MAGISK_DEBUG
-#define VLOG(fmt, ...) printf(fmt, __VA_ARGS__)
+	#define VLOG(fmt, ...) printf(fmt, __VA_ARGS__)
 #else
-#define VLOG(fmt, ...)
+	#define VLOG(fmt, ...)
 #endif
 
 extern policydb_t *policydb;
@@ -71,7 +71,8 @@ struct device {
 	char path[64];
 };
 
-static void parse_cmdline(struct cmdline *cmd) {
+static void parse_cmdline(struct cmdline *cmd)
+{
 	// cleanup
 	memset(cmd, 0, sizeof(&cmd));
 
@@ -96,7 +97,8 @@ static void parse_cmdline(struct cmdline *cmd) {
 	VLOG("cmdline: skip_initramfs[%d] slot[%s]\n", cmd->skip_initramfs, cmd->slot);
 }
 
-static void parse_device(struct device *dev, char *uevent) {
+static void parse_device(struct device *dev, char *uevent)
+{
 	dev->partname[0] = '\0';
 	char *tok;
 	tok = strtok(uevent, "\n");
@@ -115,7 +117,8 @@ static void parse_device(struct device *dev, char *uevent) {
 	VLOG("%s [%s] (%u, %u)\n", dev->devname, dev->partname, (unsigned) dev->major, (unsigned) dev->minor);
 }
 
-static int setup_block(struct device *dev, const char *partname) {
+static int setup_block(struct device *dev, const char *partname)
+{
 	char buffer[1024], path[128];
 	struct dirent *entry;
 	DIR *dir = opendir("/sys/dev/block");
@@ -148,7 +151,8 @@ static int setup_block(struct device *dev, const char *partname) {
 	return 0;
 }
 
-static void patch_ramdisk() {
+static void patch_ramdisk()
+{
 	void *addr;
 	size_t size;
 	mmap_rw("/init", &addr, &size);
@@ -168,13 +172,15 @@ static void patch_ramdisk() {
 	free(addr);
 }
 
-static int strend(const char *s1, const char *s2) {
+static int strend(const char *s1, const char *s2)
+{
 	size_t l1 = strlen(s1);
 	size_t l2 = strlen(s2);
 	return strcmp(s1 + l1 - l2, s2);
 }
 
-static int compile_cil() {
+static int compile_cil()
+{
 	DIR *dir;
 	struct dirent *entry;
 	char path[128];
@@ -233,7 +239,8 @@ static int compile_cil() {
 	return 0;
 }
 
-static int verify_precompiled() {
+static int verify_precompiled()
+{
 	DIR *dir;
 	struct dirent *entry;
 	int fd;
@@ -271,7 +278,8 @@ static int verify_precompiled() {
 	return strcmp(sys_sha, ven_sha) == 0;
 }
 
-static int patch_sepolicy() {
+static int patch_sepolicy()
+{
 	if (access("/sepolicy", R_OK) == 0)
 		load_policydb("/sepolicy");
 	else if (access(SPLIT_PRECOMPILE, R_OK) == 0 && verify_precompiled())
@@ -295,7 +303,8 @@ static int patch_sepolicy() {
 
 #define BUFSIZE (1 << 20)
 
-static int unxz(const void *buf, size_t size, int fd) {
+static int unxz(const void *buf, size_t size, int fd)
+{
 	lzma_stream strm = LZMA_STREAM_INIT;
 	if (lzma_auto_decoder(&strm, UINT64_MAX, 0) != LZMA_OK)
 		return 1;
@@ -318,7 +327,8 @@ static int unxz(const void *buf, size_t size, int fd) {
 	return 0;
 }
 
-static int dump_magisk(const char *path, mode_t mode) {
+static int dump_magisk(const char *path, mode_t mode)
+{
 	unlink(path);
 	int fd = creat(path, mode);
 	int ret = unxz(magisk_dump, sizeof(magisk_dump), fd);
@@ -326,14 +336,16 @@ static int dump_magisk(const char *path, mode_t mode) {
 	return ret;
 }
 
-static int dump_magiskrc(const char *path, mode_t mode) {
+static int dump_magiskrc(const char *path, mode_t mode)
+{
 	int fd = creat(path, mode);
 	write(fd, magiskrc, sizeof(magiskrc));
 	close(fd);
 	return 0;
 }
 
-static void patch_socket_name(const char *path) {
+static void patch_socket_name(const char *path)
+{
 	void *buf;
 	size_t size;
 	mmap_rw(path, &buf, &size);
@@ -350,7 +362,8 @@ static void patch_socket_name(const char *path) {
 	munmap(buf, size);
 }
 
-int main(int argc, char *argv[]) {
+int main(int argc, char *argv[])
+{
 	umask(0);
 
 	for (int i = 0; init_applet[i]; ++i) {
@@ -428,7 +441,7 @@ int main(int argc, char *argv[]) {
 		xmount("sysfs", "/sys", "sysfs", 0, NULL);
 
 		// Mount system
-		snprintf(partname, sizeof(partname), "system%s", cmd.slot);
+		snprintf(partname, sizeof(partname), "SYSTEM%s", cmd.slot);
 		setup_block(&dev, partname);
 		if (cmd.skip_initramfs) {
 			mkdir("/system_root", 0755);
@@ -447,7 +460,7 @@ int main(int argc, char *argv[]) {
 		}
 
 		// Mount vendor
-		snprintf(partname, sizeof(partname), "vendor%s", cmd.slot);
+		snprintf(partname, sizeof(partname), "VENDOR%s", cmd.slot);
 		if (setup_block(&dev, partname) == 0)
 			xmount(dev.path, "/vendor", "ext4", MS_RDONLY, NULL);
 	}
